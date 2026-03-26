@@ -599,4 +599,4 @@ The main variable cost is Claude API usage. A typical run processes ~2,000–4,0
 
 ---
 
-*Research Bot Army is CC0 — public domain. Use it, modify it, share it freely.*
+*Research Bot Army is released under the MIT License — see [LICENSE](LICENSE) for details.*

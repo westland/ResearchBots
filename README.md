@@ -164,4 +164,4 @@ systemctl status research-bot
 
 ## License
 
-CC0 1.0 Universal — public domain. Use it for anything.
+MIT License — see [LICENSE](LICENSE) for details.
