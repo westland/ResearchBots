@@ -1,0 +1,92 @@
+# ============================================================
+#  Research Bot Army — Product & Market Configuration
+#  Edit this file to define what you want researched.
+#  API keys and secrets go in .env (never here).
+# ============================================================
+
+product:
+  # The name of YOUR product or brand (used in Claude's briefing prompt)
+  name: "Your Product Name"
+
+  # Short description for context in the AI-generated report
+  description: "Brief description of what your product does"
+
+  # Category helps Claude frame analysis correctly
+  # Examples: "SaaS", "consumer electronics", "fashion", "mobile app", "food & beverage"
+  category: "SaaS"
+
+  # Keywords the news and review agents search for
+  # Put your most specific terms first; 3–6 keywords is ideal
+  keywords:
+    - "your primary keyword"
+    - "your brand name"
+    - "competitor category term"
+
+  # Competitor URLs to monitor for pricing/content changes
+  # Use the page you care most about (pricing page, homepage, etc.)
+  competitors:
+    - name: "Competitor A"
+      url: "https://competitor-a.com/pricing"
+    - name: "Competitor B"
+      url: "https://competitor-b.com"
+    - name: "Competitor C"
+      url: "https://competitor-c.com"
+
+  # Subreddits to search for mentions and sentiment
+  # Remove ones that don't apply to your market
+  review_subreddits:
+    - "startups"
+    - "entrepreneur"
+    - "SaaS"
+    - "smallbusiness"
+
+# ============================================================
+#  Schedule — when the daily briefing runs
+# ============================================================
+schedule:
+  hour: 7        # Hour in UTC (7 = 7:00 AM UTC)
+  minute: 0
+  timezone: "UTC"
+  run_on_start: true   # Run one cycle immediately when the service starts
+
+# ============================================================
+#  Agents — toggle and tune individual research agents
+# ============================================================
+agents:
+  news:
+    enabled: true
+    max_articles: 15       # Max articles per run
+
+  competitor:
+    enabled: true
+    timeout_seconds: 25    # Per-site HTTP timeout
+
+  reviews:
+    enabled: true
+    max_posts: 20          # Max Reddit posts to pull
+
+  trends:
+    enabled: true
+    hn_stories: 10         # Max HackerNews stories
+
+# ============================================================
+#  Delivery — where the report gets sent
+#  Set enabled: true and fill matching keys in .env
+# ============================================================
+delivery:
+  telegram:
+    enabled: false
+    # Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
+
+  slack:
+    enabled: false
+    # Set SLACK_WEBHOOK_URL in .env
+
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    # Set EMAIL_ADDRESS and EMAIL_PASSWORD in .env
+    # Use a Gmail App Password (not your main password)
+    to_addresses:
+      - "you@example.com"

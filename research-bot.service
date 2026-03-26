@@ -1,0 +1,24 @@
+[Unit]
+Description=Research Bot Army
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/research-bot-army
+Environment="PYTHONPATH=/opt/research-bot-army/src"
+ExecStart=/opt/research-bot-army/venv/bin/python /opt/research-bot-army/main.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/opt/research-bot-army/logs/service.log
+StandardError=append:/opt/research-bot-army/logs/service.log
+
+# Hard memory guard — kills + restarts if process exceeds 700 MB
+# (leaves ~300 MB headroom for the OS on a 1 GB droplet)
+MemoryMax=700M
+
+[Install]
+WantedBy=multi-user.target
