@@ -1,92 +1,115 @@
-# ============================================================
-#  Research Bot Army — Product & Market Configuration
-#  Edit this file to define what you want researched.
-#  API keys and secrets go in .env (never here).
-# ============================================================
-
 product:
-  # The name of YOUR product or brand (used in Claude's briefing prompt)
-  name: "Your Product Name"
-
-  # Short description for context in the AI-generated report
-  description: "Brief description of what your product does"
-
-  # Category helps Claude frame analysis correctly
-  # Examples: "SaaS", "consumer electronics", "fashion", "mobile app", "food & beverage"
-  category: "SaaS"
-
-  # Keywords the news and review agents search for
-  # Put your most specific terms first; 3–6 keywords is ideal
+  name: FLAMMA FF02 Drum Machine Guitar Pedal
+  description: 'Brief description of what your productSave and Customize Rhythms:
+    Provides 66 slots in 11 groups (6 per group) for quick switching of customizable
+    drum loops, perfect as a drum pedal for guitar and a flexible guitar effects pedal
+    for live and studio use Easy Tempo and Fills Control: Set BPM with tap tempo and
+    trigger real-time fills, ensuring dynamic control for a drum machine for guitar
+    in practice or performance Stereo Inputs and Outputs: Dual mono inputs/outputs
+    allow seamless integration into guitar effects pedal setups, bass rigs, or studio
+    environments as a professional rhythm pedal Compact and Intuitive Design: LED
+    indicators, dual footswitches, and a clear screen provide effortless operation,
+    making this drum pedal for guitar user-friendly and performance-ready does'
+  category: consumer electronics musical instrument
   keywords:
-    - "your primary keyword"
-    - "your brand name"
-    - "competitor category term"
-
-  # Competitor URLs to monitor for pricing/content changes
-  # Use the page you care most about (pricing page, homepage, etc.)
+  - your primary keyword
+  - your brand name
+  - competitor category term
+  - guitar effects pedal for live and studio use
+  - drum loops, perfect as a drum pedal io us
   competitors:
-    - name: "Competitor A"
-      url: "https://competitor-a.com/pricing"
-    - name: "Competitor B"
-      url: "https://competitor-b.com"
-    - name: "Competitor C"
-      url: "https://competitor-c.com"
-
-  # Subreddits to search for mentions and sentiment
-  # Remove ones that don't apply to your market
+  - name: Competitor A
+    url: https://www.sweetwater.com/
+  - name: Competitor B
+    url: https://www.sweetwater.com/
+  - name: Competitor C
+    url: https://www.sweetwater.com/
   review_subreddits:
-    - "startups"
-    - "entrepreneur"
-    - "SaaS"
-    - "smallbusiness"
-
-# ============================================================
-#  Schedule — when the daily briefing runs
-# ============================================================
+  - startups
+  - entrepreneur
+  - SaaS
+  - smallbusiness
+objectives:
+- Identify emerging market opportunities before competitors do
+- Monitor and respond to competitive threats in real time
+- Track customer sentiment trends across all channels
+- Surface actionable intelligence for product decisions
+workflows:
+- name: Daily Market Brief
+  description: Comprehensive daily intelligence across all research channels
+  agents:
+  - news
+  - competitor
+  - reviews
+  - trends
+  manager: Market Intelligence Lead
+  max_workers: 2
+  objectives:
+  - Identify emerging market opportunities
+  - Track competitor pricing and feature changes
+  - Monitor customer sentiment trends
+  schedule:
+    hour: 7
+    minute: 0
+  enabled: true
+- name: Competitor Deep Dive
+  description: Focused analysis of competitor moves and pricing — runs weekly
+  agents:
+  - competitor
+  - trends
+  manager: Competitive Intelligence Lead
+  max_workers: 2
+  objectives:
+  - Track all competitor pricing changes
+  - Monitor new feature launches and announcements
+  schedule:
+    hour: 8
+    minute: 0
+  enabled: false
+- name: Community Pulse
+  description: Daily community sentiment and review monitoring
+  agents:
+  - reviews
+  - news
+  manager: Community Intelligence Lead
+  max_workers: 2
+  objectives:
+  - Track brand mentions and overall sentiment
+  - Surface recurring customer pain points
+  schedule:
+    hour: 9
+    minute: 0
+  enabled: false
 schedule:
-  hour: 7        # Hour in UTC (7 = 7:00 AM UTC)
+  hour: 7
   minute: 0
-  timezone: "UTC"
-  run_on_start: true   # Run one cycle immediately when the service starts
-
-# ============================================================
-#  Agents — toggle and tune individual research agents
-# ============================================================
+  timezone: UTC
+  run_on_start: true
 agents:
   news:
     enabled: true
-    max_articles: 15       # Max articles per run
-
+    max_articles: 15
   competitor:
     enabled: true
-    timeout_seconds: 25    # Per-site HTTP timeout
-
+    timeout_seconds: 25
   reviews:
     enabled: true
-    max_posts: 20          # Max Reddit posts to pull
-
+    max_posts: 20
   trends:
     enabled: true
-    hn_stories: 10         # Max HackerNews stories
-
-# ============================================================
-#  Delivery — where the report gets sent
-#  Set enabled: true and fill matching keys in .env
-# ============================================================
+    hn_stories: 10
+dashboard:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
 delivery:
   telegram:
     enabled: false
-    # Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env
-
   slack:
     enabled: false
-    # Set SLACK_WEBHOOK_URL in .env
-
   email:
     enabled: false
-    smtp_host: "smtp.gmail.com"
+    smtp_host: smtp.gmail.com
     smtp_port: 587
-    # Set EMAIL_ADDRESS and EMAIL_PASSWORD in .env
-    # Use a Gmail App Password (not your main password)
     to_addresses:
-      - "you@example.com"
+    - you@example.com

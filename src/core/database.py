@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at  TEXT    NOT NULL,
     product     TEXT    NOT NULL,
     report_md   TEXT    NOT NULL,
-    token_count INTEGER
+    token_count INTEGER,
+    workflow    TEXT    DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS agent_results (
@@ -45,6 +46,26 @@ CREATE TABLE IF NOT EXISTS agent_state (
     value      TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS runs (
+    id           TEXT PRIMARY KEY,
+    workflow     TEXT    DEFAULT '',
+    status       TEXT    NOT NULL DEFAULT 'pending',
+    started_at   TEXT,
+    completed_at TEXT,
+    error_msg    TEXT,
+    report_id    INTEGER,
+    created_at   TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS run_events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id     TEXT    NOT NULL,
+    event_type TEXT    NOT NULL,
+    agent_name TEXT,
+    message    TEXT,
+    created_at TEXT    NOT NULL
+);
 """
 
 
@@ -60,13 +81,69 @@ class Database:
         self._conn.commit()
         logger.info(f"Database ready at {db_path}")
 
+    # ---- run tracking ----
+
+    def create_run(self, run_id: str, workflow: str = "") -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR IGNORE INTO runs (id, workflow, status, created_at) VALUES (?,?,?,?)",
+                (run_id, workflow, "pending", datetime.utcnow().isoformat()),
+            )
+            self._conn.commit()
+
+    def update_run_status(self, run_id: str, status: str, error: str | None = None) -> None:
+        now = datetime.utcnow().isoformat()
+        with self._lock:
+            if status == "running":
+                self._conn.execute(
+                    "UPDATE runs SET status=?, started_at=? WHERE id=?",
+                    (status, now, run_id),
+                )
+            elif status in ("completed", "failed"):
+                self._conn.execute(
+                    "UPDATE runs SET status=?, completed_at=?, error_msg=? WHERE id=?",
+                    (status, now, error, run_id),
+                )
+            else:
+                self._conn.execute("UPDATE runs SET status=? WHERE id=?", (status, run_id))
+            self._conn.commit()
+
+    def link_run_report(self, run_id: str, report_id: int) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE runs SET report_id=? WHERE id=?", (report_id, run_id))
+            self._conn.commit()
+
+    def add_run_event(self, run_id: str, event_type: str, agent_name: str = "", message: str = "") -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO run_events (run_id, event_type, agent_name, message, created_at) VALUES (?,?,?,?,?)",
+                (run_id, event_type, agent_name, message, datetime.utcnow().isoformat()),
+            )
+            self._conn.commit()
+
+    def get_run(self, run_id: str) -> dict | None:
+        row = self._conn.execute("SELECT * FROM runs WHERE id=?", (run_id,)).fetchone()
+        return dict(row) if row else None
+
+    def get_run_events(self, run_id: str) -> list:
+        rows = self._conn.execute(
+            "SELECT * FROM run_events WHERE run_id=? ORDER BY created_at ASC", (run_id,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_recent_runs(self, limit: int = 20) -> list:
+        rows = self._conn.execute(
+            "SELECT * FROM runs ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     # ---- writes (serialized) ----
 
-    def save_report(self, product: str, report_md: str, token_count: int = 0) -> int:
+    def save_report(self, product: str, report_md: str, token_count: int = 0, workflow: str = "") -> int:
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO reports (created_at, product, report_md, token_count) VALUES (?,?,?,?)",
-                (datetime.utcnow().isoformat(), product, report_md, token_count),
+                "INSERT INTO reports (created_at, product, report_md, token_count, workflow) VALUES (?,?,?,?,?)",
+                (datetime.utcnow().isoformat(), product, report_md, token_count, workflow),
             )
             self._conn.commit()
             return cur.lastrowid
@@ -121,9 +198,21 @@ class Database:
         ).fetchone()
         return row["value"] if row else None
 
-    def get_recent_reports(self, product: str, limit: int = 5) -> list:
-        rows = self._conn.execute(
-            "SELECT * FROM reports WHERE product=? ORDER BY created_at DESC LIMIT ?",
-            (product, limit),
-        ).fetchall()
+    def get_recent_reports(self, product: str = "", limit: int = 20) -> list:
+        if product:
+            rows = self._conn.execute(
+                "SELECT id, created_at, product, token_count, workflow, substr(report_md,1,300) as preview "
+                "FROM reports WHERE product=? ORDER BY created_at DESC LIMIT ?",
+                (product, limit),
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT id, created_at, product, token_count, workflow, substr(report_md,1,300) as preview "
+                "FROM reports ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_report(self, report_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM reports WHERE id=?", (report_id,)).fetchone()
+        return dict(row) if row else None

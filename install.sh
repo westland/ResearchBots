@@ -168,6 +168,12 @@ echo ""
 echo "  Set your product name, keywords, and competitor URLs."
 echo ""
 
+# ---- Step 5b: Open dashboard port ----
+if command -v ufw &>/dev/null; then
+  ufw allow 8080/tcp &>/dev/null || true
+  info "Firewall: port 8080 (dashboard) opened."
+fi
+
 # ---- Step 6: systemd service ----
 info "Installing systemd service..."
 cp "$INSTALL_DIR/research-bot.service" /etc/systemd/system/${SERVICE_NAME}.service
@@ -190,7 +196,8 @@ echo "════════════════════════�
 echo "  Installation complete!"
 echo "════════════════════════════════════════════════"
 echo ""
-echo "  Edit config:   nano $INSTALL_DIR/config.yml"
+echo "  Web dashboard: http://$(curl -s ifconfig.me 2>/dev/null || echo YOUR_SERVER_IP):8080"
+echo "  Edit config:   nano $INSTALL_DIR/config.yml  (or use the dashboard)"
 echo "  View logs:     journalctl -u $SERVICE_NAME -f"
 echo "             or: tail -f $INSTALL_DIR/logs/service.log"
 echo "  Run now:       cd $INSTALL_DIR && venv/bin/python main.py --now"

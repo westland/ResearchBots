@@ -14,7 +14,7 @@ Write in clean markdown. Be concise — founders are busy."""
 
 _USER_TEMPLATE = """\
 Product: {product_name} ({product_category})
-{product_description}
+{product_description}{objectives}
 Date: {date}
 
 == NEWS & INDUSTRY ==
@@ -110,7 +110,7 @@ def _fmt_trends(items: list) -> str:
     return "\n".join(lines)
 
 
-def synthesize(config: AppConfig, agent_data: dict) -> tuple[str, int]:
+def synthesize(config: AppConfig, agent_data: dict, objectives: list | None = None) -> tuple[str, int]:
     """Generate the daily briefing. Returns (markdown_text, token_count)."""
     client = anthropic.Anthropic(api_key=config.anthropic_api_key)
     product = config.product
@@ -120,10 +120,16 @@ def synthesize(config: AppConfig, agent_data: dict) -> tuple[str, int]:
     review_items = agent_data.get("reviews", {}).get("data", [])
     trend_items = agent_data.get("trends", {}).get("data", [])
 
+    obj_section = ""
+    if objectives:
+        obj_lines = "\n".join(f"- {o}" for o in objectives)
+        obj_section = f"\nResearch objectives for this run:\n{obj_lines}\n"
+
     user_msg = _USER_TEMPLATE.format(
         product_name=product.name,
         product_category=product.category,
         product_description=f"Description: {product.description}" if product.description else "",
+        objectives=obj_section,
         date=datetime.utcnow().strftime("%B %d, %Y"),
         news=_fmt_news(news_items),
         competitors=_fmt_competitors(comp_items),

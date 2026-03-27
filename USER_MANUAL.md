@@ -7,30 +7,34 @@
 3. [Server Setup (Digital Ocean)](#3-server-setup-digital-ocean)
 4. [Deploying the Bot Army](#4-deploying-the-bot-army)
 5. [Running the Installer](#5-running-the-installer)
-6. [Configuring Your Product](#6-configuring-your-product)
-7. [Setting Up API Keys](#7-setting-up-api-keys)
-8. [Setting Up Delivery Channels](#8-setting-up-delivery-channels)
-9. [Starting and Managing the Service](#9-starting-and-managing-the-service)
-10. [Understanding the Daily Report](#10-understanding-the-daily-report)
-11. [Monitoring and Logs](#11-monitoring-and-logs)
-12. [Running a Manual Research Cycle](#12-running-a-manual-research-cycle)
-13. [Updating Your Configuration](#13-updating-your-configuration)
-14. [Troubleshooting](#14-troubleshooting)
-15. [Updating to a New Version](#15-updating-to-a-new-version)
-16. [Cost Estimates](#16-cost-estimates)
+6. [The Web Dashboard](#6-the-web-dashboard)
+7. [Configuring Your Product](#7-configuring-your-product)
+8. [Managing Workflows](#8-managing-workflows)
+9. [Setting Up API Keys](#9-setting-up-api-keys)
+10. [Setting Up Delivery Channels](#10-setting-up-delivery-channels)
+11. [Starting and Managing the Service](#11-starting-and-managing-the-service)
+12. [Understanding the Daily Report](#12-understanding-the-daily-report)
+13. [Monitoring and Logs](#13-monitoring-and-logs)
+14. [Running a Manual Research Cycle](#14-running-a-manual-research-cycle)
+15. [Updating Your Configuration](#15-updating-your-configuration)
+16. [Troubleshooting](#16-troubleshooting)
+17. [Updating to a New Version](#17-updating-to-a-new-version)
+18. [Cost Estimates](#18-cost-estimates)
 
 ---
 
 ## 1. Overview
 
-Research Bot Army is a self-hosted system that automatically researches your product and market every day. You set it up once, and every morning it delivers a briefing covering:
+Research Bot Army is a self-hosted system that automatically researches your product and market. Assign a task and walk away — agents run asynchronously in the background while you monitor progress from any device via the built-in web dashboard.
+
+Every research cycle delivers a briefing covering:
 
 - **News** — what's being written about your market
 - **Competitor changes** — pricing or website updates at your competitors
 - **Community sentiment** — what people are saying on Reddit and review sites
 - **Trends** — search interest and industry buzz on HackerNews
 
-An AI (Claude) reads all the raw data and writes you a clean, concise summary with action items.
+Claude (Anthropic) reads all the raw data and writes a clean, concise summary with action items.
 
 Everything runs on a server you control. Your data never leaves your infrastructure.
 
@@ -39,9 +43,9 @@ Everything runs on a server you control. Your data never leaves your infrastruct
 ## 2. What You Need Before Starting
 
 ### Required
-- **Anthropic API key** — get one free at [console.anthropic.com](https://console.anthropic.com). This powers the AI report generation. You will be charged per report (~$0.01–0.05 per daily run depending on data volume).
-- **A Digital Ocean account** — sign up at [digitalocean.com](https://digitalocean.com). A basic $6–12/month droplet is sufficient.
-- **SSH access** to your droplet
+- **Anthropic API key** — get one at [console.anthropic.com](https://console.anthropic.com). Powers the AI report generation (~$0.01–0.05 per run).
+- **A Digital Ocean account** — [digitalocean.com](https://digitalocean.com). A basic $6–12/month droplet is sufficient.
+- **SSH access** to your droplet.
 
 ### Recommended (free tiers available)
 - **NewsAPI key** — [newsapi.org](https://newsapi.org) — free tier: 100 requests/day. Gives much better news coverage than the RSS fallback.
@@ -49,8 +53,8 @@ Everything runs on a server you control. Your data never leaves your infrastruct
 
 ### Optional (for report delivery)
 You need at least one of:
-- A **Telegram bot** (free, setup instructions in Section 8)
-- A **Slack workspace** with incoming webhooks enabled (free)
+- A **Telegram bot** (free, setup in Section 10)
+- A **Slack workspace** with incoming webhooks (free)
 - An **email address** with SMTP access (Gmail works well)
 
 ---
@@ -63,7 +67,7 @@ You need at least one of:
 2. Click **Create → Droplets**
 3. Choose:
    - **Image:** Ubuntu 24.04 LTS
-   - **Size:** Basic — 1 GB RAM / 1 CPU / 25 GB SSD (~$6/month) is sufficient
+   - **Size:** Basic — 1 GB RAM / 1 CPU / 25 GB SSD (~$6/month)
    - **Region:** Choose one close to you
    - **Authentication:** SSH Key (recommended) or Password
 4. Click **Create Droplet**
@@ -81,13 +85,11 @@ On Windows (PowerShell):
 ssh root@YOUR_DROPLET_IP
 ```
 
-You should see a welcome message and the `root@hostname:~#` prompt.
-
 ---
 
 ## 4. Deploying the Bot Army
 
-You need to copy the project files from your local machine to the server.
+Copy the project files from your local machine to the server.
 
 ### On Mac/Linux — use the deploy script:
 ```bash
@@ -101,12 +103,10 @@ First, create the directory on the server (in your SSH session):
 mkdir -p /opt/research-bot-army
 ```
 
-Then, in a new PowerShell window on your local machine:
+Then in a PowerShell window on your local machine:
 ```powershell
 scp -r "C:\path\to\Research Bot Army\." root@YOUR_DROPLET_IP:/opt/research-bot-army/
 ```
-
-When prompted, enter your server password (or it will use your SSH key automatically).
 
 ---
 
@@ -121,24 +121,83 @@ bash install.sh
 
 The installer will:
 
-1. **Check your Python version** and install system dependencies
-2. **Add swap space** if your droplet has only 1 GB RAM (prevents out-of-memory errors during pip installs)
-3. **Create a Python virtual environment** and install all dependencies
-4. **Ask for your API keys** interactively:
-   - Anthropic API key (required)
-   - NewsAPI key (optional)
-   - SerpAPI key (optional)
-5. **Ask for delivery channel credentials** (Telegram, Slack, or email)
-6. **Install and enable the systemd service** so the bot restarts automatically if the server reboots
-7. **Optionally start the service** immediately
+1. Check your Python version and install system dependencies
+2. Add 1 GB swap if your droplet has only 1 GB RAM
+3. Create a Python virtual environment and install all dependencies
+4. Ask for your API keys interactively (Anthropic required, NewsAPI and SerpAPI optional)
+5. Ask for delivery channel credentials (Telegram, Slack, or email)
+6. Open port 8080 in the firewall for the web dashboard
+7. Install and enable the systemd service
+8. Optionally start the service immediately
 
-After the installer finishes, you will see a summary with useful commands.
+When complete, the installer prints your server's IP and the dashboard URL:
+```
+Web dashboard: http://YOUR_IP:8080
+```
 
 ---
 
-## 6. Configuring Your Product
+## 6. The Web Dashboard
 
-This is the most important step. Open the configuration file:
+Once the service is running, open a browser and go to:
+```
+http://YOUR_DROPLET_IP:8080
+```
+
+The dashboard has five tabs:
+
+### 📊 Overview
+- System status (last run, next scheduled run, active workflows)
+- **Run Now** button — select a workflow and trigger an async research cycle
+- Live progress panel showing agents moving through stages in real time
+- Recent run history
+
+### 🏭 Factory — Mission Control
+A visual pipeline showing your research workflow in real time.
+
+**Pipeline stages:**
+```
+READY → FETCHING → DATA IN → CLAUDE → SHIPPED
+```
+
+Each research agent appears as a pixel-art character that moves between stages as it works. The **Workflow Architecture** section below the pipeline renders a visual tree of your `config.yml` — your product at the root, each workflow as a branch showing its assigned agents, team manager, schedule, and objectives.
+
+### ⚙️ Config
+Edit your entire configuration without touching YAML:
+- Product name, description, category
+- Keywords (tag input — press Enter to add)
+- Competitors (add/remove rows)
+- Subreddits to monitor
+- Global research objectives
+- Schedule (hour, minute, timezone)
+- Agent toggles and limits
+- Delivery channels
+
+Click **Save Config** when done. Restart the service to apply schedule changes.
+
+### 🔄 Workflows
+Define named research campaigns. Each workflow has:
+- A name and description
+- A selection of agents (News, Competitor, Reviews, Trends)
+- A team manager / lead name (for context in reports)
+- Per-workflow objectives that guide Claude's analysis
+- An independent schedule
+- A max workers setting (keep ≤ 2 on a 1 GB droplet)
+- An enable/disable toggle
+
+Click **Save Workflows** to persist. Enabled workflows run on their own schedule in addition to the default cycle. Any workflow can also be triggered manually from the Overview tab.
+
+### ▶ Runs
+Full history of all research runs with status badges, duration, and a detail modal showing the event log for each run.
+
+### 📋 Reports
+Browse all past reports with date, workflow, and token count. Click **Read** to open the full markdown report. Click **Download .md** to save it locally.
+
+---
+
+## 7. Configuring Your Product
+
+You can edit configuration in the dashboard's **Config tab** (recommended) or directly on the server:
 
 ```bash
 nano /opt/research-bot-army/config.yml
@@ -149,55 +208,60 @@ nano /opt/research-bot-army/config.yml
 ```yaml
 product:
   name: "Your Product Name"
-```
-The name of your product or brand. Used in the AI prompt and report titles.
-
-```yaml
-  description: "Brief description of what your product does"
-```
-One sentence describing your product. Helps Claude frame the analysis correctly.
-
-```yaml
+  description: "One sentence describing your product"
   category: "SaaS"
-```
-Your product category. Examples: `"consumer electronics"`, `"SaaS"`, `"fashion"`, `"food & beverage"`, `"mobile app"`.
-
-```yaml
   keywords:
     - "your primary keyword"
     - "your brand name"
     - "competitor category term"
-```
-3–6 search terms. Put your most specific terms first. These are used by the news and reviews agents to find relevant content.
-
-```yaml
   competitors:
     - name: "Competitor A"
       url: "https://competitor-a.com/pricing"
-    - name: "Competitor B"
-      url: "https://competitor-b.com"
-```
-Add each competitor you want to monitor. Use the specific page you care about most — a pricing page is ideal if they have one. The bot will detect any changes to these pages between runs.
-
-```yaml
   review_subreddits:
     - "startups"
-    - "entrepreneur"
     - "SaaS"
 ```
-Subreddits where your target audience hangs out. The reviews agent searches these for mentions of your keywords.
+
+- **name** — used in report titles and the AI prompt
+- **description** — helps Claude frame the analysis
+- **category** — e.g. `"consumer electronics"`, `"SaaS"`, `"mobile app"`
+- **keywords** — 3–6 terms used by news and review agents; most specific first
+- **competitors** — use the pricing page if they have one; change detection runs on these URLs
+- **review_subreddits** — where your target audience discusses your market
+
+### Research Objectives Section
+
+```yaml
+objectives:
+  - "Identify emerging market opportunities before competitors do"
+  - "Monitor and respond to competitive threats in real time"
+  - "Track customer sentiment trends across all channels"
+```
+
+These are included in the Claude prompt to focus analysis on what matters most to you. Add up to 5–6 specific objectives.
 
 ### Schedule Section
 
 ```yaml
 schedule:
-  hour: 7        # 7 = 7:00 AM UTC
+  hour: 7        # UTC hour (7 = 7:00 AM UTC)
   minute: 0
   timezone: "UTC"
   run_on_start: true
 ```
 
-Set `hour` and `minute` to when you want the daily report. The time is in UTC. To convert: UK = UTC, US East = UTC-5 (so 7 AM UTC = 2 AM Eastern). Set `run_on_start: true` to get a report immediately when the service starts.
+Time is in UTC. US Eastern = UTC−5, so `hour: 12` = 7 AM Eastern. Set `run_on_start: true` to get a report immediately when the service starts.
+
+### Dashboard Section
+
+```yaml
+dashboard:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
+```
+
+Change `port` if 8080 is in use. Set `enabled: false` to run headless (no web UI).
 
 ### Agents Section
 
@@ -208,6 +272,7 @@ agents:
     max_articles: 15
   competitor:
     enabled: true
+    timeout_seconds: 25
   reviews:
     enabled: true
     max_posts: 20
@@ -216,36 +281,65 @@ agents:
     hn_stories: 10
 ```
 
-You can disable any agent by setting `enabled: false`. Useful if you want to save API costs or an agent is causing problems.
+Disable any agent with `enabled: false`. These are the global defaults; individual workflows can override which agents they use.
 
-### Delivery Section
-
-```yaml
-delivery:
-  telegram:
-    enabled: false   # change to true if using Telegram
-  slack:
-    enabled: false   # change to true if using Slack
-  email:
-    enabled: false   # change to true if using email
-    smtp_host: "smtp.gmail.com"
-    smtp_port: 587
-    to_addresses:
-      - "you@example.com"
-```
-
-Enable whichever channels you set up. You can enable multiple. The actual credentials (tokens, passwords) go in `.env`, not here.
-
-**Save and exit nano:** `Ctrl+O` then `Enter` to save, `Ctrl+X` to exit.
-
-After any config change, restart the service:
+After any manual config change, restart the service:
 ```bash
 systemctl restart research-bot
 ```
 
 ---
 
-## 7. Setting Up API Keys
+## 8. Managing Workflows
+
+Workflows are named research campaigns you can run on a schedule or on demand.
+
+### Adding a Workflow (Dashboard)
+
+1. Go to the **Workflows tab**
+2. Click **+ Add Workflow**
+3. Fill in:
+   - **Name** — e.g. "Daily Market Brief"
+   - **Description** — what this workflow monitors
+   - **Agents** — click to select which agents run (News, Competitor, Reviews, Trends)
+   - **Team Manager** — a label for who "owns" this workflow (shown in Factory view and reports)
+   - **Schedule** — UTC hour and minute for automatic runs
+   - **Max Workers** — parallel agent threads; keep at 2 for a 1 GB droplet
+   - **Objectives** — specific goals for Claude's analysis on this workflow
+   - **Enabled toggle** — only enabled workflows run on schedule
+4. Click **Save Workflows**
+
+### Running a Workflow On Demand
+
+1. Go to the **Overview tab**
+2. Select the workflow from the dropdown
+3. Click **▶ Run Now**
+
+The run executes asynchronously. Monitor live progress in the panel below the button, or switch to the **Factory tab** to watch the pipeline.
+
+### Workflow Architecture (YAML)
+
+Workflows are stored in `config.yml` under the `workflows:` key:
+
+```yaml
+workflows:
+  - name: "Daily Market Brief"
+    description: "Full daily intelligence across all channels"
+    agents: [news, competitor, reviews, trends]
+    manager: "Market Intelligence Lead"
+    max_workers: 2
+    objectives:
+      - "Identify emerging market opportunities"
+      - "Track competitor pricing and feature changes"
+    schedule:
+      hour: 7
+      minute: 0
+    enabled: true
+```
+
+---
+
+## 9. Setting Up API Keys
 
 All secrets go in the `.env` file on the server:
 
@@ -266,7 +360,7 @@ nano /opt/research-bot-army/.env
 ### NewsAPI Key (Optional but Recommended)
 
 1. Go to [newsapi.org](https://newsapi.org) and sign up for free
-2. Your API key is shown on the dashboard
+2. Your API key is on the dashboard
 3. Add to `.env`:
    ```
    NEWS_API_KEY=your-newsapi-key
@@ -275,43 +369,30 @@ nano /opt/research-bot-army/.env
 ### SerpAPI Key (Optional)
 
 1. Go to [serpapi.com](https://serpapi.com) and sign up
-2. Find your API key on the dashboard
-3. Add to `.env`:
+2. Add to `.env`:
    ```
    SERP_API_KEY=your-serpapi-key
    ```
 
 ---
 
-## 8. Setting Up Delivery Channels
+## 10. Setting Up Delivery Channels
 
 ### Telegram
 
-Telegram is the easiest and most reliable delivery method — reports arrive as messages to your phone instantly.
-
 **Step 1 — Create a bot:**
 1. Open Telegram and search for `@BotFather`
-2. Send `/newbot`
-3. Follow the prompts — choose a name and username for your bot
-4. BotFather will give you a token like: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`
-5. Add it to `.env`:
-   ```
-   TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
-   ```
+2. Send `/newbot` and follow the prompts
+3. BotFather gives you a token like `123456789:ABCdef...`
+4. Add to `.env`: `TELEGRAM_BOT_TOKEN=123456789:ABCdef...`
 
 **Step 2 — Get your Chat ID:**
-1. Start a conversation with your new bot in Telegram (search for it by username and press Start)
-2. Open this URL in your browser (replace TOKEN with your actual token):
-   ```
-   https://api.telegram.org/botTOKEN/getUpdates
-   ```
-3. You'll see JSON output. Find the `"id"` number inside `"chat"` — that's your Chat ID
-4. Add it to `.env`:
-   ```
-   TELEGRAM_CHAT_ID=123456789
-   ```
+1. Start a conversation with your bot in Telegram
+2. Visit `https://api.telegram.org/botTOKEN/getUpdates` in a browser
+3. Find the `"id"` number inside `"chat"` in the JSON
+4. Add to `.env`: `TELEGRAM_CHAT_ID=123456789`
 
-**Step 3 — Enable in config.yml:**
+**Step 3 — Enable in Config tab or config.yml:**
 ```yaml
 delivery:
   telegram:
@@ -321,17 +402,12 @@ delivery:
 ### Slack
 
 **Step 1 — Create an Incoming Webhook:**
-1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App → From Scratch**
-2. Name it (e.g. "Research Bot") and pick your workspace
-3. In the app settings, click **Incoming Webhooks → Activate Incoming Webhooks**
-4. Click **Add New Webhook to Workspace** and choose a channel
-5. Copy the webhook URL (starts with `https://hooks.slack.com/services/...`)
-6. Add to `.env`:
-   ```
-   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your/webhook/url
-   ```
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App → From Scratch**
+2. Enable **Incoming Webhooks** and add a webhook to your chosen channel
+3. Copy the webhook URL
+4. Add to `.env`: `SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...`
 
-**Step 2 — Enable in config.yml:**
+**Step 2 — Enable:**
 ```yaml
 delivery:
   slack:
@@ -340,199 +416,176 @@ delivery:
 
 ### Email (Gmail)
 
-Gmail requires an App Password (not your regular password) when using SMTP.
-
 **Step 1 — Create a Gmail App Password:**
-1. Go to your Google Account → **Security**
-2. Enable **2-Step Verification** if not already enabled
-3. Go to **Security → App Passwords**
-4. Select **Mail** and your device, click **Generate**
-5. Copy the 16-character password
+1. Google Account → Security → **2-Step Verification** (enable if needed)
+2. Security → **App Passwords** → generate one for Mail
+3. Add to `.env`:
+   ```
+   EMAIL_ADDRESS=youraddress@gmail.com
+   EMAIL_PASSWORD=abcd efgh ijkl mnop
+   ```
 
-**Step 2 — Add to `.env`:**
-```
-EMAIL_ADDRESS=youraddress@gmail.com
-EMAIL_PASSWORD=abcd efgh ijkl mnop
-```
-
-**Step 3 — Enable in config.yml:**
+**Step 2 — Enable:**
 ```yaml
 delivery:
   email:
     enabled: true
-    smtp_host: "smtp.gmail.com"
-    smtp_port: 587
     to_addresses:
       - "you@example.com"
-      - "colleague@example.com"
 ```
 
 ---
 
-## 9. Starting and Managing the Service
+## 11. Starting and Managing the Service
 
-### Start the service
 ```bash
-systemctl start research-bot
+systemctl start research-bot      # Start
+systemctl stop research-bot       # Stop
+systemctl restart research-bot    # Restart (required after config changes)
+systemctl status research-bot     # Check status
+systemctl enable research-bot     # Auto-start on reboot (done by installer)
 ```
 
-### Stop the service
-```bash
-systemctl stop research-bot
-```
+### Entry Point Flags
 
-### Restart after config changes
 ```bash
-systemctl restart research-bot
-```
+# Start scheduler + web dashboard (default)
+venv/bin/python main.py
 
-### Check if it's running
-```bash
-systemctl status research-bot
-```
+# Run one cycle immediately and exit (no dashboard, no scheduler)
+venv/bin/python main.py --now
 
-### Enable auto-start on server reboot (already done by installer)
-```bash
-systemctl enable research-bot
-```
-
-### Disable auto-start
-```bash
-systemctl disable research-bot
+# Start scheduler only, no web dashboard
+venv/bin/python main.py --no-api
 ```
 
 ---
 
-## 10. Understanding the Daily Report
+## 12. Understanding the Daily Report
 
 The report is generated by Claude and structured into six sections:
 
-**Executive Summary**
-2–3 sentences covering the most important thing that happened in your market today.
+**Executive Summary** — 2–3 sentences on what matters most today.
 
-**News & Industry**
-The top 3–5 news stories relevant to your keywords, with a one-line takeaway for each.
+**News & Industry** — top 3–5 stories with a one-line takeaway each.
 
-**Competitor Watch**
-Status of each configured competitor. If a competitor's page changed since yesterday, it will be flagged as **CHANGED** with details. Pricing found on the page is extracted and listed.
+**Competitor Watch** — status of each configured competitor. Pages that changed since the last run are flagged as **CHANGED**. Pricing found on the page is extracted and listed.
 
-**Community Pulse**
-What real people are saying on Reddit and review sites. Surfaces complaints, questions, comparisons, and praise.
+**Community Pulse** — what real people are saying on Reddit and review sites. Surfaces complaints, questions, comparisons, and praise.
 
-**Trends**
-Google Trends interest scores for your keywords, and relevant HackerNews stories with point counts.
+**Trends** — Google Trends interest scores for your keywords, and relevant HackerNews stories.
 
-**Today's Action Items**
-1–3 concrete things worth acting on based only on today's data. These might include: following up on a competitor change, responding to a Reddit thread, or investigating a news story.
+**Today's Action Items** — 1–3 concrete things worth acting on based only on today's data.
+
+Report length: 400–600 words. Token cost: ~1500–2500 tokens per run.
 
 ---
 
-## 11. Monitoring and Logs
+## 13. Monitoring and Logs
 
-### Live log stream
+### Via the Dashboard
+
+The **Runs tab** shows full run history with status and event logs. The **Factory tab** shows live pipeline state during an active run.
+
+### Via the Server
+
 ```bash
+# Live log stream
 tail -f /opt/research-bot-army/logs/service.log
-```
 
-### View recent log entries
-```bash
+# View recent entries
 tail -100 /opt/research-bot-army/logs/service.log
-```
 
-### Check systemd journal
-```bash
+# systemd journal
 journalctl -u research-bot -f
 ```
 
-### What to look for in logs
+### A Healthy Run Looks Like This
 
-A healthy run looks like this:
 ```
-INFO: === Research cycle started: My Product (run_id=2026-03-26T07:00:00) ===
+INFO: === Research cycle started: My Product run_id=20260327T070000-startup ===
 INFO: Agent news: success (15 items, 3.2s)
 INFO: Agent competitor: success (3 items, 8.1s)
 INFO: Agent reviews: success (12 items, 4.5s)
 INFO: Agent trends: success (5 items, 6.3s)
 INFO: Calling Claude to synthesize report...
 INFO: Report generated: 2341 chars, 1823 tokens
-INFO: Telegram: sent part 1/1
 INFO: === Research cycle complete (1823 tokens) ===
 ```
 
-If an agent shows `failed`, the run still completes — Claude just has less data to work with.
+If an agent shows `failed`, the run still completes — Claude just has less data.
 
 ---
 
-## 12. Running a Manual Research Cycle
+## 14. Running a Manual Research Cycle
 
-To trigger a report right now without waiting for the schedule:
+**Via the Dashboard:** Go to Overview, select a workflow (or leave blank for default), click **▶ Run Now**.
 
+**Via the server:**
 ```bash
 cd /opt/research-bot-army
 venv/bin/python main.py --now
 ```
 
-The report will print to the terminal and also be delivered to your configured channels.
+The report prints to the terminal and is delivered to your configured channels.
 
 ---
 
-## 13. Updating Your Configuration
+## 15. Updating Your Configuration
 
-Any time you want to change your product, keywords, competitors, or schedule:
+**Via the Dashboard (recommended):**
+1. Open the **Config tab** or **Workflows tab**
+2. Make changes
+3. Click **Save Config** or **Save Workflows**
+4. Restart the service to apply schedule changes: `systemctl restart research-bot`
 
-1. Edit the config:
-   ```bash
-   nano /opt/research-bot-army/config.yml
-   ```
+**Via the server directly:**
+```bash
+nano /opt/research-bot-army/config.yml
+systemctl restart research-bot
+```
 
-2. Save and restart:
-   ```bash
-   systemctl restart research-bot
-   ```
-
-To add or change API keys or delivery credentials:
-
-1. Edit the secrets file:
-   ```bash
-   nano /opt/research-bot-army/.env
-   ```
-
-2. Restart:
-   ```bash
-   systemctl restart research-bot
-   ```
+To add or change API keys:
+```bash
+nano /opt/research-bot-army/.env
+systemctl restart research-bot
+```
 
 ---
 
-## 14. Troubleshooting
+## 16. Troubleshooting
+
+### Dashboard won't load at http://YOUR_IP:8080
+- Check port 8080 is open: `ufw status` — should show `8080/tcp ALLOW`
+- If not: `ufw allow 8080/tcp`
+- Check the service is running: `systemctl status research-bot`
 
 ### Service won't start
 ```bash
 systemctl status research-bot
 tail -50 /opt/research-bot-army/logs/service.log
 ```
-Look for `ERROR` lines. The most common cause is a missing or incorrect `ANTHROPIC_API_KEY` in `.env`.
+Most common cause: missing or incorrect `ANTHROPIC_API_KEY` in `.env`.
 
 ### No report being delivered
-1. Check that at least one delivery channel is `enabled: true` in `config.yml`
-2. Check that the credentials in `.env` are correct
-3. Run `venv/bin/python main.py --now` and look for delivery error messages
+1. Check at least one delivery channel is `enabled: true` in Config tab
+2. Check credentials in `.env` are correct
+3. Run `venv/bin/python main.py --now` and look for delivery errors in output
 
 ### "Bad credentials" from Telegram
 - Double-check `TELEGRAM_BOT_TOKEN` in `.env`
-- Make sure you started a conversation with your bot in Telegram before the first run
-- Re-check your Chat ID using the `getUpdates` URL method in Section 8
+- Make sure you started a conversation with your bot in Telegram
+- Re-check Chat ID using the `getUpdates` URL in Section 10
 
 ### Competitor agent returning no prices
-Most sites don't show prices in plain text — they use JavaScript or images. The agent extracts text-visible prices only. If a site uses JavaScript to render its pricing, the agent will still detect page changes but may not extract the exact price figures.
+Most sites use JavaScript to render prices. The agent extracts text-visible prices only. It will still detect page changes even when it can't extract price figures.
 
 ### Google Trends failing
-pytrends is an unofficial library and Google rate-limits it aggressively. If it fails, the bot logs a warning and continues without it. HackerNews results are always included. Trends data is cached for 6 hours to reduce rate-limit risk.
+pytrends is unofficial and Google rate-limits it. If it fails, the bot continues without it. Trends data is cached for 6 hours to reduce rate-limit risk.
 
 ### Out of memory errors
-If your droplet has only 1 GB RAM and the service is being killed:
 ```bash
-# Check if the OOM killer is involved
+# Check if OOM killer is involved
 dmesg | grep -i "killed process"
 
 # Add more swap
@@ -542,61 +595,31 @@ mkswap /swapfile2
 swapon /swapfile2
 ```
 
-### NewsAPI returning old articles
-The free NewsAPI tier only returns articles from the past 30 days. If you're looking for very recent news (last few hours), the Google News RSS fallback is actually more current.
-
 ---
 
-## 15. Updating to a New Version
+## 17. Updating to a New Version
 
-When a new release is published:
-
-**1. On your local machine, pull the latest code:**
+**1. Pull the latest code on your local machine:**
 ```bash
 git pull origin main
 ```
 
 **2. Redeploy to the server:**
-
-On Mac/Linux:
 ```bash
 bash deploy.sh root@YOUR_DROPLET_IP
 ```
 
-On Windows (PowerShell):
-```powershell
-scp -r ".\." root@YOUR_DROPLET_IP:/opt/research-bot-army/
-```
-
-**3. On the server, update dependencies and restart:**
-```bash
-ssh root@YOUR_DROPLET_IP
-cd /opt/research-bot-army
-source venv/bin/activate
-pip install -r requirements.txt -q
-systemctl restart research-bot
-```
-
-Your `.env` and `config.yml` are preserved — they are not overwritten by updates.
+The installer will update dependencies and restart the service. Your `.env` and `data/` (database) are preserved.
 
 ---
 
-## 16. Cost Estimates
+## 18. Cost Estimates
 
 | Item | Cost |
 |---|---|
 | Digital Ocean 1 GB droplet | ~$6–12/month |
-| Anthropic API (Claude) | ~$0.01–0.05 per daily report |
-| NewsAPI | Free (100 req/day) |
-| SerpAPI | Free (100 searches/month) |
-| Telegram delivery | Free |
-| Slack delivery | Free |
-| Gmail SMTP | Free |
-
-**Typical monthly total: ~$7–15/month** for a fully running system with daily reports.
-
-The main variable cost is Claude API usage. A typical run processes ~2,000–4,000 tokens, costing roughly $0.01–0.03 at current Anthropic pricing. Running once per day = under $1/month in AI costs.
-
----
-
-*Research Bot Army is released under the MIT License — see [LICENSE](LICENSE) for details.*
+| Claude API (~2000–4000 tokens/day) | ~$0.01–0.05/day (~$0.30–1.50/month) |
+| NewsAPI (free tier: 100 req/day) | $0 |
+| SerpAPI (free tier: 100 searches/month) | $0 |
+| Telegram / Slack / Email | $0 |
+| **Total** | **~$7–15/month** |

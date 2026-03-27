@@ -54,6 +54,31 @@ class DeliveryConfig:
 
 
 @dataclass
+class WorkflowSchedule:
+    hour: int = 7
+    minute: int = 0
+
+
+@dataclass
+class WorkflowConfig:
+    name: str
+    agents: list = field(default_factory=lambda: ["news", "competitor", "reviews", "trends"])
+    description: str = ""
+    manager: str = ""
+    objectives: list = field(default_factory=list)
+    schedule: WorkflowSchedule = field(default_factory=WorkflowSchedule)
+    max_workers: int = 2
+    enabled: bool = True
+
+
+@dataclass
+class DashboardConfig:
+    enabled: bool = True
+    host: str = "0.0.0.0"
+    port: int = 8080
+
+
+@dataclass
 class AppConfig:
     product: ProductConfig
     schedule: ScheduleConfig
@@ -64,6 +89,9 @@ class AppConfig:
     serp_api_key: str = ""
     data_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "data")
     logs_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "logs")
+    workflows: list = field(default_factory=list)
+    objectives: list = field(default_factory=list)
+    dashboard: DashboardConfig = field(default_factory=DashboardConfig)
 
 
 def load_config() -> AppConfig:
@@ -121,6 +149,30 @@ def load_config() -> AppConfig:
         email_password=os.getenv("EMAIL_PASSWORD", ""),
     )
 
+    workflows = []
+    for wf in raw.get("workflows", []):
+        wf_sched_raw = wf.get("schedule", {})
+        workflows.append(WorkflowConfig(
+            name=wf.get("name", "Unnamed Workflow"),
+            agents=wf.get("agents", ["news", "competitor", "reviews", "trends"]),
+            description=wf.get("description", ""),
+            manager=wf.get("manager", ""),
+            objectives=wf.get("objectives", []),
+            schedule=WorkflowSchedule(
+                hour=wf_sched_raw.get("hour", 7),
+                minute=wf_sched_raw.get("minute", 0),
+            ),
+            max_workers=wf.get("max_workers", 2),
+            enabled=wf.get("enabled", True),
+        ))
+
+    db_raw = raw.get("dashboard", {})
+    dashboard = DashboardConfig(
+        enabled=db_raw.get("enabled", True),
+        host=db_raw.get("host", "0.0.0.0"),
+        port=db_raw.get("port", 8080),
+    )
+
     return AppConfig(
         product=product,
         schedule=schedule,
@@ -129,4 +181,7 @@ def load_config() -> AppConfig:
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
         news_api_key=os.getenv("NEWS_API_KEY", ""),
         serp_api_key=os.getenv("SERP_API_KEY", ""),
+        workflows=workflows,
+        objectives=raw.get("objectives", []),
+        dashboard=dashboard,
     )

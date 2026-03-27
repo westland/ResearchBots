@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Bot Army — Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     Navigation
+     ============================================================ -->
+<nav class="nav">
+  <span class="nav-brand">🤖 Research Bot Army</span>
+  <span class="nav-product" id="nav-product">Loading…</span>
+  <div class="nav-spacer"></div>
+  <div class="nav-status">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="nav-status-text">Connecting…</span>
+  </div>
+</nav>
+
+<!-- ============================================================
+     Tabs
+     ============================================================ -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+  <button class="tab-btn" data-tab="factory">🏭 Factory</button>
+  <button class="tab-btn" data-tab="config">⚙️ Config</button>
+  <button class="tab-btn" data-tab="workflows">🔄 Workflows</button>
+  <button class="tab-btn" data-tab="runs">▶ Runs</button>
+  <button class="tab-btn" data-tab="reports">📋 Reports</button>
+</div>
+
+<main class="main">
+
+<!-- ============================================================
+     OVERVIEW TAB
+     ============================================================ -->
+<section id="tab-overview" class="tab-panel active">
+
+  <div id="overview-alert" class="alert"></div>
+
+  <!-- Stats row -->
+  <div class="grid-3" style="margin-bottom:1rem">
+    <div class="stat-card">
+      <div class="stat-label">Product</div>
+      <div class="stat-value" id="stat-product" style="font-size:1rem;margin-top:.3rem">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last Run</div>
+      <div class="stat-value" id="stat-last-run">—</div>
+      <div class="stat-sub">
+        <span id="stat-last-workflow"></span>
+        · <span id="stat-last-status"></span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Schedule</div>
+      <div class="stat-value" id="stat-schedule" style="font-size:1rem;margin-top:.3rem">—</div>
+      <div class="stat-sub">Active workflows: <span id="stat-workflows">—</span></div>
+      <div class="stat-sub text-xs" id="stat-wf-names"></div>
+    </div>
+  </div>
+
+  <!-- Run panel -->
+  <div class="run-panel">
+    <h2>🚀 Assign a Research Task</h2>
+    <p>Select a workflow (or run with default agent settings) and launch an async research cycle. You can monitor progress below and check back from your phone.</p>
+    <div class="run-options">
+      <select id="run-workflow-select">
+        <option value="">Default (global agent config)</option>
+      </select>
+      <button class="btn btn-primary btn-lg" id="btn-run-now">▶ Run Now</button>
+    </div>
+  </div>
+
+  <!-- Active run progress -->
+  <div class="card hidden" id="active-run-panel">
+    <div class="card-header">
+      <span class="icon">⟳</span>
+      Active Run: <code id="active-run-id" style="font-size:.8rem;margin-left:.5rem"></code>
+      <span id="active-run-status" style="margin-left:auto"></span>
+    </div>
+    <div class="card-body">
+      <ul class="event-list" id="active-run-events">
+        <li class="event-item"><span class="event-icon"><span class="spinner dark"></span></span><div class="event-body">Waiting for agent updates…</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Recent runs -->
+  <div class="card">
+    <div class="card-header"><span class="icon">📋</span> Recent Runs</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Run ID</th><th>Workflow</th><th>Status</th><th>Started</th><th>Duration</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="runs-tbody-overview">
+          <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section><!-- /overview -->
+
+<!-- ============================================================
+     FACTORY TAB
+     ============================================================ -->
+<section id="tab-factory" class="tab-panel">
+
+  <!-- Mission Control Header -->
+  <div class="mc-header">
+    <div class="mc-left">
+      <div class="mc-brand">MISSION CONTROL</div>
+      <div class="mc-product" id="mc-product">Loading…</div>
+    </div>
+    <div class="mc-center">
+      <div class="mc-run-label">Active Run</div>
+      <div class="mc-run-id" id="mc-run-id">—</div>
+      <div class="mc-workflow" id="mc-workflow">No active run</div>
+    </div>
+    <div class="mc-right">
+      <div class="mc-status-dot" id="mc-dot"></div>
+      <div id="mc-status-text" class="mc-status-text">Idle</div>
+      <button class="btn btn-primary btn-sm mt-2" onclick="document.querySelector('[data-tab=overview]').click()">▶ Assign Task</button>
+    </div>
+  </div>
+
+  <!-- Pipeline -->
+  <div class="pipeline-wrap">
+    <div class="pipeline" id="pipeline">
+
+      <div class="stage stage-ready" id="stage-ready">
+        <div class="stage-header">
+          <span class="stage-icon">💤</span>
+          <span class="stage-name">READY</span>
+          <span class="stage-count" id="count-ready">0</span>
+        </div>
+        <div class="stage-floor" id="floor-ready"></div>
+      </div>
+
+      <div class="stage-arrow">→</div>
+
+      <div class="stage stage-fetching" id="stage-fetching">
+        <div class="stage-header">
+          <span class="stage-icon">🔎</span>
+          <span class="stage-name">FETCHING</span>
+          <span class="stage-count" id="count-fetching">0</span>
+        </div>
+        <div class="stage-floor" id="floor-fetching"></div>
+      </div>
+
+      <div class="stage-arrow">→</div>
+
+      <div class="stage stage-done" id="stage-done">
+        <div class="stage-header">
+          <span class="stage-icon">✓</span>
+          <span class="stage-name">DATA IN</span>
+          <span class="stage-count" id="count-done">0</span>
+        </div>
+        <div class="stage-floor" id="floor-done"></div>
+      </div>
+
+      <div class="stage-arrow">→</div>
+
+      <div class="stage stage-synthesizing" id="stage-synthesizing">
+        <div class="stage-header">
+          <span class="stage-icon">🤖</span>
+          <span class="stage-name">CLAUDE</span>
+          <span class="stage-count" id="count-synthesizing">0</span>
+        </div>
+        <div class="stage-floor" id="floor-synthesizing"></div>
+      </div>
+
+      <div class="stage-arrow">→</div>
+
+      <div class="stage stage-delivered" id="stage-delivered">
+        <div class="stage-header">
+          <span class="stage-icon">🚀</span>
+          <span class="stage-name">SHIPPED</span>
+          <span class="stage-count" id="count-delivered">0</span>
+        </div>
+        <div class="stage-floor" id="floor-delivered"></div>
+      </div>
+
+    </div><!-- /pipeline -->
+  </div><!-- /pipeline-wrap -->
+
+  <!-- Activity log (live during run) -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-header"><span class="icon">📡</span> Live Activity</div>
+    <div class="card-body" style="padding:.5rem 1rem; max-height:140px; overflow-y:auto">
+      <ul class="event-list" id="factory-events">
+        <li class="event-item"><div class="event-body text-muted text-sm">Waiting for a run…</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Workflow Architecture (config.yml reflection) -->
+  <div class="card">
+    <div class="card-header"><span class="icon">🗺</span> Workflow Architecture <span class="label-hint text-sm" style="margin-left:.5rem">reflects config.yml</span></div>
+    <div class="card-body" style="padding:.75rem 1rem">
+      <div class="arch-product" id="arch-product">
+        <div class="arch-product-name" id="arch-product-name">Product</div>
+        <div class="arch-branches" id="arch-branches">
+          <div class="text-muted text-sm">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section><!-- /factory -->
+
+<!-- ============================================================
+     CONFIG TAB
+     ============================================================ -->
+<section id="tab-config" class="tab-panel">
+
+  <div id="config-alert" class="alert"></div>
+
+  <!-- Product -->
+  <div class="card">
+    <div class="card-header"><span class="icon">🏷</span> Product</div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Product Name</label>
+          <input type="text" id="cfg-product-name" placeholder="Acme SaaS">
+        </div>
+        <div class="form-group">
+          <label>Category <span class="label-hint">e.g. SaaS, mobile app, consumer electronics</span></label>
+          <input type="text" id="cfg-product-category" placeholder="SaaS">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description <span class="label-hint">One sentence, used in AI briefings</span></label>
+        <input type="text" id="cfg-product-desc" placeholder="A tool that helps founders monitor their market…">
+      </div>
+      <div class="form-group">
+        <label>Search Keywords <span class="label-hint">Press Enter or comma to add (3–6 ideal)</span></label>
+        <div class="tag-input-wrap">
+          <input type="text" id="cfg-keywords" class="tag-input" placeholder="Type keyword and press Enter">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Subreddits to monitor <span class="label-hint">Press Enter or comma to add</span></label>
+        <div class="tag-input-wrap">
+          <input type="text" id="cfg-subreddits" class="tag-input" placeholder="startups, SaaS…">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Competitors -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">🔍</span> Competitors
+      <button class="btn btn-secondary btn-sm ml-auto" id="btn-add-competitor">+ Add</button>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:.5rem;margin-bottom:.5rem;font-size:.78rem;color:var(--text-muted);padding:0 0 .25rem">
+        <span>Name</span><span>URL (pricing/homepage)</span><span></span>
+      </div>
+      <div id="competitors-list"></div>
+    </div>
+  </div>
+
+  <!-- Research Objectives -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">🎯</span> Global Research Objectives
+      <button class="btn btn-secondary btn-sm ml-auto" id="btn-add-objective">+ Add</button>
+    </div>
+    <div class="card-body">
+      <p class="text-sm text-muted mb-2">These guide Claude's analysis across all workflows. Be specific about what matters to you.</p>
+      <div id="objectives-list"></div>
+    </div>
+  </div>
+
+  <!-- Schedule -->
+  <div class="card">
+    <div class="card-header"><span class="icon">🕐</span> Default Schedule</div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Hour (UTC, 0–23)</label>
+          <input type="number" id="cfg-sched-hour" min="0" max="23" value="7">
+        </div>
+        <div class="form-group">
+          <label>Minute (0–59)</label>
+          <input type="number" id="cfg-sched-minute" min="0" max="59" value="0">
+        </div>
+        <div class="form-group">
+          <label>Timezone label</label>
+          <input type="text" id="cfg-sched-tz" value="UTC" placeholder="UTC">
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Run on service start</div>
+          <div class="toggle-sub">Trigger a cycle immediately when the service starts</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-run-on-start" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="card">
+    <div class="card-header"><span class="icon">🤖</span> Agent Settings</div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">📰 News Agent</div><div class="toggle-sub">NewsAPI + Google News RSS</div></div>
+            <label class="toggle"><input type="checkbox" id="cfg-agent-news" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group mt-2">
+            <label>Max articles per run</label>
+            <input type="number" id="cfg-news-max" min="1" max="50" value="15">
+          </div>
+        </div>
+        <div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">🔍 Competitor Agent</div><div class="toggle-sub">Scrapes competitor URLs</div></div>
+            <label class="toggle"><input type="checkbox" id="cfg-agent-competitor" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group mt-2">
+            <label>HTTP timeout (seconds)</label>
+            <input type="number" id="cfg-comp-timeout" min="5" max="60" value="25">
+          </div>
+        </div>
+        <div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">💬 Reviews Agent</div><div class="toggle-sub">Reddit + review sites</div></div>
+            <label class="toggle"><input type="checkbox" id="cfg-agent-reviews" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group mt-2">
+            <label>Max Reddit posts per run</label>
+            <input type="number" id="cfg-reviews-max" min="1" max="100" value="20">
+          </div>
+        </div>
+        <div>
+          <div class="toggle-row">
+            <div><div class="toggle-label">📈 Trends Agent</div><div class="toggle-sub">Google Trends + HackerNews</div></div>
+            <label class="toggle"><input type="checkbox" id="cfg-agent-trends" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group mt-2">
+            <label>Max HackerNews stories</label>
+            <input type="number" id="cfg-hn-max" min="1" max="50" value="10">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery -->
+  <div class="card">
+    <div class="card-header"><span class="icon">📬</span> Delivery Channels <span class="label-hint text-sm" style="margin-left:.5rem">API keys set in .env on server</span></div>
+    <div class="card-body">
+      <div class="toggle-row">
+        <div><div class="toggle-label">Telegram</div><div class="toggle-sub">Set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID in .env</div></div>
+        <label class="toggle"><input type="checkbox" id="cfg-tg-enabled"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Slack</div><div class="toggle-sub">Set SLACK_WEBHOOK_URL in .env</div></div>
+        <label class="toggle"><input type="checkbox" id="cfg-sl-enabled"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Email</div><div class="toggle-sub">Set EMAIL_ADDRESS + EMAIL_PASSWORD in .env</div></div>
+        <label class="toggle"><input type="checkbox" id="cfg-em-enabled"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="grid-2 mt-2">
+        <div class="form-group">
+          <label>SMTP Host</label>
+          <input type="text" id="cfg-em-smtp" value="smtp.gmail.com">
+        </div>
+        <div class="form-group">
+          <label>SMTP Port</label>
+          <input type="number" id="cfg-em-port" value="587">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Recipient addresses <span class="label-hint">Press Enter to add</span></label>
+        <div class="tag-input-wrap">
+          <input type="email" id="cfg-email-to" class="tag-input" placeholder="you@example.com">
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary" id="btn-save-config">💾 Save Config</button>
+      <span class="text-xs text-muted ml-auto">Restart the service after schedule changes</span>
+    </div>
+  </div>
+
+</section><!-- /config -->
+
+<!-- ============================================================
+     WORKFLOWS TAB
+     ============================================================ -->
+<section id="tab-workflows" class="tab-panel">
+
+  <div id="workflows-alert" class="alert"></div>
+
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-body" style="padding:.75rem 1rem">
+      <p class="text-sm text-muted">Define named research workflows with dedicated agents, a team manager, and specific objectives. Enable a workflow to have it run on its own schedule in addition to the default cycle. You can also trigger any workflow manually from the Overview tab.</p>
+    </div>
+  </div>
+
+  <div id="workflows-container"></div>
+
+  <div class="flex gap-2 mt-3">
+    <button class="btn btn-secondary" id="btn-add-workflow">+ Add Workflow</button>
+    <button class="btn btn-primary ml-auto" id="btn-save-workflows">💾 Save Workflows</button>
+  </div>
+
+</section><!-- /workflows -->
+
+<!-- ============================================================
+     RUNS TAB
+     ============================================================ -->
+<section id="tab-runs" class="tab-panel">
+
+  <div class="card">
+    <div class="card-header"><span class="icon">▶</span> Run History</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Run ID</th><th>Workflow</th><th>Status</th><th>Started</th><th>Duration</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="runs-tbody">
+          <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section><!-- /runs -->
+
+<!-- ============================================================
+     REPORTS TAB
+     ============================================================ -->
+<section id="tab-reports" class="tab-panel">
+
+  <div class="card">
+    <div class="card-header"><span class="icon">📋</span> Research Reports</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Workflow</th><th>Tokens</th><th>Preview</th><th></th></tr>
+        </thead>
+        <tbody id="reports-tbody">
+          <tr><td colspan="5" class="text-muted">No reports yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section><!-- /reports -->
+
+</main><!-- /main -->
+
+<!-- ============================================================
+     Run Detail Modal
+     ============================================================ -->
+<div id="run-detail-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem">
+  <div class="card" style="width:100%;max-width:600px;max-height:80vh;overflow-y:auto;margin:0">
+    <div class="card-header">
+      Run Detail
+      <button id="modal-close" class="btn btn-secondary btn-sm ml-auto">✕ Close</button>
+    </div>
+    <div class="card-body">
+      <div class="grid-2 mb-3">
+        <div><div class="text-xs text-muted">Run ID</div><code id="modal-run-id" class="text-xs"></code></div>
+        <div><div class="text-xs text-muted">Status</div><span id="modal-run-status"></span></div>
+        <div><div class="text-xs text-muted">Workflow</div><span id="modal-run-workflow"></span></div>
+        <div><div class="text-xs text-muted">Duration</div><span id="modal-run-started"></span> → <span id="modal-run-completed"></span></div>
+      </div>
+      <div class="section-heading">Progress Events</div>
+      <ul class="event-list" id="modal-run-events"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     Report Viewer Modal
+     ============================================================ -->
+<div id="report-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem">
+  <div class="card" style="width:100%;max-width:720px;max-height:90vh;overflow-y:auto;margin:0">
+    <div class="card-header">
+      Research Report
+      <button id="report-modal-close" class="btn btn-secondary btn-sm ml-auto">✕ Close</button>
+    </div>
+    <div class="card-body">
+      <div class="flex gap-3 mb-2 text-sm text-muted">
+        <span>📅 <span id="modal-report-date"></span></span>
+        <span>🔄 <span id="modal-report-workflow"></span></span>
+        <span>🔢 <span id="modal-report-tokens"></span> tokens</span>
+      </div>
+      <pre id="modal-report-content" class="report-full open"></pre>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-secondary" id="btn-download-report">⬇ Download .md</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
